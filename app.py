@@ -3,66 +3,12 @@ import pandas as pd
 import sqlite3
 from datetime import datetime
 
+# --- 1. CONFIGURATION (Must be the first command) ---
 st.set_page_config(page_title="Smart Library System", page_icon="📚", layout="wide")
-def add_bg_animation():
-    st.markdown(
-        """
-        <style>
-        /* 1. The Animated Gradient Background */
-        .stApp {
-            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-            background-size: 400% 400%;
-            animation: gradient 15s ease infinite;
-        }
 
-        @keyframes gradient {
-            0% {
-                background-position: 0% 50%;
-            }
-            50% {
-                background-position: 100% 50%;
-            }
-            100% {
-                background-position: 0% 50%;
-            }
-        }
 
-        /* 2. Make Text Readable (Glassmorphism Effect) */
-        /* This targets the main content blocks to give them a white, see-through look */
-        [data-testid="stSidebar"] {
-            background-color: rgba(255, 255, 255, 0.5);
-            backdrop-filter: blur(10px);
-        }
-        
-        .stDataFrame, .stMetric, .stForm {
-            background-color: rgba(255, 255, 255, 0.85);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        
-        /* 3. Customize Buttons */
-        .stButton>button {
-            color: white;
-            background: #FF4B4B;
-            border-radius: 20px;
-            border: none;
-            transition: all 0.3s ease;
-        }
-        
-        .stButton>button:hover {
-            transform: scale(1.05);
-            background: #FF0000;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
 
-# --- CALL THE FUNCTION ---
-add_bg_animation()
-# --- DATABASE SETUP ---
+# --- 3. DATABASE SETUP ---
 def init_db():
     conn = sqlite3.connect('library.db')
     c = conn.cursor()
@@ -84,7 +30,7 @@ def init_db():
 # Initialize DB on first run
 init_db()
 
-# --- DATABASE FUNCTIONS ---
+# --- 4. DATABASE FUNCTIONS ---
 def add_book_to_db(book_id, title, author, category):
     conn = sqlite3.connect('library.db')
     c = conn.cursor()
@@ -100,6 +46,7 @@ def add_book_to_db(book_id, title, author, category):
 
 def get_all_books():
     conn = sqlite3.connect('library.db')
+    # Use pandas to read sql easily
     df = pd.read_sql_query("SELECT * FROM books", conn)
     conn.close()
     return df
@@ -119,15 +66,30 @@ def delete_book(book_id):
     conn.commit()
     conn.close()
 
-# --- UI CONFIGURATION ---
-st.set_page_config(page_title="Smart Library System", page_icon="📚", layout="wide")
+# --- 5. UI & NAVIGATION ---
 
-# --- SIDEBAR NAVIGATION ---
+# Sidebar
 st.sidebar.title("📚 Library Menu")
 menu = st.sidebar.radio("Go to:", ["Dashboard", "Add New Book", "Issue Book", "Return Book", "Search & Manage"])
 
 # --- PAGE 1: DASHBOARD ---
 if menu == "Dashboard":
+    
+    # --- HEADER: COLLEGE LOGO & NAME ---
+    # Using columns to center the content
+    # [10, 3, 10] ratio creates a narrow center column to force the logo to the middle
+    col1, col2, col3 = st.columns([10, 3, 10])
+    with col2:
+        try:
+            # Ensure 'logo.jpeg' is in the same directory
+            st.image("logo.jpeg", use_container_width=True)
+        except Exception:
+            st.warning("Logo not found")
+    
+    st.markdown("<h2 style='text-align: center;'>BMS College of Engineering</h2>", unsafe_allow_html=True)
+    st.markdown("---")
+    # -----------------------------------
+
     st.title("📊 Library Dashboard")
     df = get_all_books()
     
@@ -141,8 +103,8 @@ if menu == "Dashboard":
         col2.metric("Books Issued", issued_books, delta_color="inverse")
         col3.metric("Available Now", available_books)
         
-        st.markdown("### Recently Added Books")
-        st.dataframe(df.tail(5))
+        st.markdown("### 🆕 Recently Added Books")
+        st.dataframe(df.tail(5), use_container_width=True)
     else:
         st.info("Library is empty. Go to 'Add New Book' to start.")
 
@@ -225,6 +187,7 @@ elif menu == "Search & Manage":
     search_term = st.text_input("Search by Title, Author, or ID")
     
     if search_term:
+        # Simple case-insensitive search across all columns
         mask = df.apply(lambda x: x.astype(str).str.contains(search_term, case=False).any(), axis=1)
         df_display = df[mask]
     else:
